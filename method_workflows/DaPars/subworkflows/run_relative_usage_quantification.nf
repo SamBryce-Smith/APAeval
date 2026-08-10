@@ -14,30 +14,23 @@ workflow RUN_RELATIVE_USAGE_QUANTIFICATION {
     main:
     /*
      *   Prepare input channles
+     *   Every sample is run on its own, with its bedgraph file used as both groups
      */
     ch_convert_to_bedgraph_out
-        .map { it -> it[0] }
-        .set { ch_sample }
-
-    ch_convert_to_bedgraph_out
         .combine( ch_extracted_3utr_output )
+        .map { idx, sample, condition, bedgraph_file, annotated_3utr ->
+            [ "relative_usage_quantification", sample, bedgraph_file.name, bedgraph_file.name, bedgraph_file, annotated_3utr ] }
         .set { ch_create_config_file_input }
 
     /*
      * Create config file to be used as input for step 2 of DaPars
      */
-    CREATE_CONFIG_FILE (
-        ch_create_config_file_input,
-        "relative_usage_quantification"
-    )
+    CREATE_CONFIG_FILE ( ch_create_config_file_input )
 
     /*
      * Run step 2 of DaPars: identify the dynamic APA usages between two conditions.
      */
-    DAPARS_MAIN (
-        CREATE_CONFIG_FILE.out.ch_dapars_input,
-        ch_sample
-    )
+    DAPARS_MAIN ( CREATE_CONFIG_FILE.out.ch_dapars_input )
 
     /*
      * Convert DaPars output file to identification challenge output file
@@ -45,9 +38,6 @@ workflow RUN_RELATIVE_USAGE_QUANTIFICATION {
     DAPARS_MAIN.out.ch_dapars_output
         .set { ch_postprocessing_input }
 
-    POSTPROCESS_RELATIVE_USAGE_QUANTIFICATION (
-        ch_sample,
-        ch_postprocessing_input
-    )
+    POSTPROCESS_RELATIVE_USAGE_QUANTIFICATION ( ch_postprocessing_input )
 }
 

@@ -44,7 +44,7 @@ workflow PREPROCESS_FILES {
      DAPARS_EXTRACT_3UTR ( ch_extract_3utr_input )
 
     ch_sample
-        .map { it -> [ it[0], it[1], it[2], it[3] ] }
+        .map { it -> [ it[0], it[1], it[2], it[3], it[4] ] }
         .set { ch_convert_to_bedgraph_input }
 
     /*

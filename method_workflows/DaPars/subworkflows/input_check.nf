@@ -12,11 +12,14 @@ workflow INPUT_CHECK {
     samplesheet // file: /path/to/samplesheet.csv
     
     main:
+    // The row index is attached here, while the samplesheet order is still known, so that
+    // the differential step can group the samples in the order given in the samplesheet
     CHECK_SAMPLESHEET ( samplesheet )
         .splitCsv ( header:true, sep:',' )
-        .map { get_sample_info(it) }
+        .toList()
+        .flatMap { rows -> rows.indexed().collect { idx, row -> [ idx ] + get_sample_info(row) } }
         .set { ch_sample }
 
     emit:
-    ch_sample // [ sample, barcode, fasta, gtf, is_transcripts, annotation_str ]
+    ch_sample // [ idx, sample, condition, bam, bai ]
 }
