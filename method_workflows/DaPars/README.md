@@ -12,6 +12,8 @@ to create the nextflow pipeline flow of this module
 
 ## Running DaPars workflow
 
+This workflow does not work with the nextflow version shipped in the main 'apaeval' conda environment. You must use the `apaeval_env_nfv25.yaml` file or a custom installation of nextflow (tested with v25.0.7)
+
 ### Input & pre-processing
 An example sample sheet is available at `samplesheet_example_files.csv`. Each row in the samplesheet has four
 columns:
