@@ -12,6 +12,8 @@ to create the nextflow pipeline flow of this module
 
 ## Running DaPars workflow
 
+This workflow does not work with the nextflow version shipped in the main 'apaeval' conda environment. You must use the `apaeval_env_nfv25.yaml` file or a custom installation of nextflow (tested with v25.0.7).
+
 ### Input & pre-processing
 An example sample sheet is available at `samplesheet_example_files.csv`. Each row in the samplesheet has four
 columns:
@@ -57,6 +59,10 @@ Parameters relevant to the workflow itself are:
 - Change 'differential_out' parameter in conf/modules.config to the desired file name that ends with '.tsv'
 - Ensure the sample sheet contains exactly two distinct conditions in the condition column. An example input file
   is samplesheet_example_files.csv
+- The two conditions are compared in the order they first appear in the sample sheet: the condition of the
+  first row becomes DaPars' group 1 and the other condition becomes group 2
+- A single config file is created once all samples have been converted to bedgraph, and DaPars is run once
+  on that config file, comparing all samples of one condition against all samples of the other
 
 ### Running the identification workflow
 - Set the 'run_identification' parameter in conf/modules.config to true
@@ -81,6 +87,17 @@ When using the default output_dir parameter value in conf/modules.config, DaPars
 DaPars/results/dapars/challenge_outputs folder. For identification and relative usage quantification
 outputs, the files have sample names as prefixes to differentiate the different runs. The differential output file
 will stay as the name specified in modules.config file.
+
+Every file produced by the workflow is published under DaPars/results/dapars, so that the intermediate files can
+be inspected alongside the challenge outputs:
+
+- `genome_file/` - the gene model converted from the input GTF file
+- `gene_symbol_file/` - the gene symbol file extracted from the input GTF file
+- `final_extracted_3utr.bed` - the 3'UTR annotation from step 1 of DaPars
+- `sample_bedgraph_files/<condition>/` - the bedgraph file of each sample
+- `config_files/<challenge>/` - the config files used for step 2 of DaPars
+- `dapars_main/<challenge>/<sample>/` - the raw output files of step 2 of DaPars
+- `challenge_outputs/` - the final challenge output files (see the output_dir parameter)
 
 ## Notes
 - Make sure that the input bam files have leading 'chr' in the chromosome column. Otherwise, once

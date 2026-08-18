@@ -10,19 +10,19 @@ def options = modules['final_output']
     Convert DaPars output file to differential challenge file
 */
 process POSTPROCESS_RELATIVE_USAGE_QUANTIFICATION {
+    tag "$id"
     publishDir "${params.outdir}/dapars/${options.output_dir}", mode: params.publish_dir_mode
     container "docker.io/apaeval/dapars:latest"
 
     input:
-    val sample
-    path dapars_output_file
+    tuple val(mode), val(id), path(dapars_output_file)
 
     output:
     path "*"
 
     script:
     run_mode = "relative_usage_quantification"
-    relative_usage_quantification_out = "${sample}_${options.relative_usage_quantification_out_suffix}"
+    relative_usage_quantification_out = "${id}_${options.relative_usage_quantification_out_suffix}"
     """
     convert_output.py $dapars_output_file $relative_usage_quantification_out $run_mode
     """

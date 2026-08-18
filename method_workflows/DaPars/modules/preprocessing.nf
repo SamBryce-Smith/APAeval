@@ -18,6 +18,7 @@ process PREPROCESSING {
 
     output:
     path converted_genome_file, emit: ch_genome_file
+    path "*.genePhred", emit: ch_genepred_file
 
     script:
     converted_genome_file = "genemodel.bed"

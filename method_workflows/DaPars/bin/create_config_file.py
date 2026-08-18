@@ -3,18 +3,18 @@
 import sys
 import argparse
 import configparser
-import os
 
 def parse_args(args=None):
 	Description = "Create config file for step 2 of DaPars."
 	Epilog = "Example usage: python create_config_file.py" + \
-			" <ANNOTATED_3UTR> <BEDGRAPHS_DIR> <OUTPUT_DIR> <NUM_LEAST_IN_GROUP1> <NUM_LEAST_IN_GROUP2>"  + \
-			" <COVERAGE_CUTOFF> <FDR_CUTOFF> <PDUI_CUTOFF> <FOLD_CHANGE_CUTOFF> <CONFIG_OUTPUT>" + \
-			" <BEDGRAPH_FILE> <RUN_MODE>"
+			" <ANNOTATED_3UTR> <GROUP1_BEDGRAPHS> <GROUP2_BEDGRAPHS> <OUTPUT_DIR>" + \
+			" <NUM_LEAST_IN_GROUP1> <NUM_LEAST_IN_GROUP2>"  + \
+			" <COVERAGE_CUTOFF> <FDR_CUTOFF> <PDUI_CUTOFF> <FOLD_CHANGE_CUTOFF> <CONFIG_OUTPUT>"
 
 	parser = argparse.ArgumentParser(description=Description, epilog=Epilog)
 	parser.add_argument("ANNOTATED_3UTR")
-	parser.add_argument("BEDGRAPHS_DIR")
+	parser.add_argument("GROUP1_BEDGRAPHS", help="Comma-separated bedgraph files of the first condition.")
+	parser.add_argument("GROUP2_BEDGRAPHS", help="Comma-separated bedgraph files of the second condition.")
 	parser.add_argument("OUTPUT_DIR")
 	parser.add_argument("NUM_LEAST_IN_GROUP1")
 	parser.add_argument("NUM_LEAST_IN_GROUP2")
@@ -23,45 +23,20 @@ def parse_args(args=None):
 	parser.add_argument("PDUI_CUTOFF")
 	parser.add_argument("FOLD_CHANGE_CUTOFF")
 	parser.add_argument("CONFIG_OUTPUT")
-	parser.add_argument("BEDGRAPH_FILE")
-	parser.add_argument("RUN_MODE")
 
 	return parser.parse_args(args)
-
-
-def get_sample_files_differential(bedgraphs_dir):
-	group1 = []
-	group2 = []
-	group = 1
-	for folder in os.listdir(bedgraphs_dir):
-		if group == 1:
-			for file in os.listdir(os.path.join(bedgraphs_dir,folder)):
-				group1.append(os.path.join(bedgraphs_dir, folder, file))
-			group += 1
-		else:
-			for file in os.listdir(os.path.join(bedgraphs_dir,folder)):
-				group2.append(os.path.join(bedgraphs_dir, folder, file))
-	group1 = ','.join(group1)
-	group2 = ','.join(group2)
-	return group1, group2
-
-
-def get_sample_files(bedgraph_dir, bedgraph_file, run_mode):
-	if run_mode == "identification" or run_mode == 'relative_usage_quantification':
-		return bedgraph_file, bedgraph_file
-	else:
-		return get_sample_files_differential(bedgraph_dir)
 
 
 def create_config_file(args):
 	"""
 	This function creates the config file for step 2 of DaPars
+	The bedgraph files of each group are grouped by condition by the pipeline and
+	are staged next to the config file, so they are referenced by name only.
 	"""
-	group1, group2 = get_sample_files(args.BEDGRAPHS_DIR, args.BEDGRAPH_FILE, args.RUN_MODE)
 	config = {
 		'Annotated_3UTR': args.ANNOTATED_3UTR,
-		'Group1_Tophat_aligned_Wig': group1,
-		'Group2_Tophat_aligned_Wig': group2,
+		'Group1_Tophat_aligned_Wig': args.GROUP1_BEDGRAPHS,
+		'Group2_Tophat_aligned_Wig': args.GROUP2_BEDGRAPHS,
 		'Output_result_file': 'dapars_output',
 		'Output_directory': args.OUTPUT_DIR,
 		'Num_least_in_group1': args.NUM_LEAST_IN_GROUP1,
