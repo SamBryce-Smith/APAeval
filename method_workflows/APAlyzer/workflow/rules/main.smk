@@ -16,7 +16,7 @@ rule main:
 
     params:
         outdir = config["out_dir"],
-	    read_cutoff = config["read_cutoff"],
+        read_cutoff = config["read_cutoff"],
         strandtype = config["strandtype"]
 
     log:
