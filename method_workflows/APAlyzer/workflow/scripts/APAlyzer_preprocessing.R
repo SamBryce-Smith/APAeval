@@ -3,6 +3,7 @@
 # 2. Check that number of conditions is exactly 2
 # 3. Get list of sample names and absolute paths to bam file
 # 4. Get a dictionary of gene symbol to gene id from gtf file
+#    (or read a precomputed gene_name,gene_id table from a CSV file)
 
 # load libraries
 if ( suppressWarnings(suppressPackageStartupMessages(require("optparse"))) == FALSE ) { stop("[ERROR] Package 'optparse' required! Aborted.") }
@@ -41,11 +42,13 @@ option_list = list(
     metavar = "files"
   ),
   make_option(
-    "--dir_path",
+    "--gene_dict_csv",
     action = "store",
     type = "character",
-    default = FALSE,
-    help = "output path",
+    default = NULL,
+    help = "Optional precomputed gene symbol to gene id table (CSV file with columns
+                'gene_name' and 'gene_id'). If provided, the table is read from this file
+                instead of being generated from the input gtf file.",
     metavar = "files"
   ),
   make_option(
@@ -88,12 +91,12 @@ sample_file = opt$sample_file_path
 # Read the sample file
 df = read.csv(file=sample_file)
 
-# get GTF file
-pwd = getwd()
-GTFfile = file.path(pwd, opt$input_gtf)
-setwd(opt$dir_path)
-pwd1 = getwd()
-file.copy(GTFfile, pwd1)
+# get absolute path to the GTF file
+# Note: the directory is normalised rather than the full path, because the file itself is a
+# symbolic link created by the 'rename_gtf' rule and APAlyzer's PAS2GEF() parses the organism,
+# genome version and Ensembl version from the *basename* of the file. Resolving the link would
+# restore the original file name and break that convention.
+GTFfile = file.path(normalizePath(dirname(opt$input_gtf)), basename(opt$input_gtf))
 
 ###########################
 ###  CHECK SAMPLE FILE  ###
@@ -138,35 +141,51 @@ for(condition in conditions) {
     condition_counts = c(condition_counts, rep(condition, sum(conditions==condition)))
 }
 
-# Get a dictionary of gene symbol to gene id from gtf file
-df = read.csv(file = GTFfile, sep = '\t', comment.char = '#')
-# initialize a dictionary
-gene_dict = hash()
-for(row in df[,9]) {
-  for(str in str_split(row, ';')[[1]]) {
-    str = trimws(str)
-    gene_symbol = ""
-    # get gene id
-    key_value_pair = str_split(str, " ")[[1]]
-    key = key_value_pair[1]
-    value = key_value_pair[2]
-    if(key == "gene_id") {
-      gene_id = value
+# Get a dictionary of gene symbol to gene id
+if(!is.null(opt$gene_dict_csv) && !identical(opt$gene_dict_csv, FALSE) && opt$gene_dict_csv != "") {
+
+    # Read a precomputed gene symbol to gene id table from a CSV file
+    gene_dict_df = read.csv(file = opt$gene_dict_csv, stringsAsFactors = FALSE)
+    missing_cols = setdiff(c("gene_name", "gene_id"), colnames(gene_dict_df))
+    if(length(missing_cols) > 0) {
+        stop(paste("The precomputed gene dict CSV file must contain the columns",
+                   "'gene_name' and 'gene_id', but the following are missing:",
+                   paste(missing_cols, collapse = ", ")))
     }
-    # get gene symbol
-    if(key== "gene_name") {
-      gene_symbol = value
+    gene_dict = hash(keys = as.character(gene_dict_df$gene_name),
+                     values = as.character(gene_dict_df$gene_id))
+
+} else {
+
+    # Build the gene symbol to gene id dictionary from the gtf file
+    gtf_df = read.csv(file = GTFfile, sep = '\t', comment.char = '#')
+    # initialize a dictionary
+    gene_dict = hash()
+    for(row in gtf_df[,9]) {
+      for(str in str_split(row, ';')[[1]]) {
+        str = trimws(str)
+        gene_symbol = ""
+        # get gene id
+        key_value_pair = str_split(str, " ")[[1]]
+        key = key_value_pair[1]
+        value = key_value_pair[2]
+        if(key == "gene_id") {
+          gene_id = value
+        }
+        # get gene symbol
+        if(key== "gene_name") {
+          gene_symbol = value
+        }
+        if(gene_symbol != "") {
+          gene_dict[[gene_symbol]] = gene_id
+        }
+      }
     }
-    if(gene_symbol != "") {
-      gene_dict[[gene_symbol]] = gene_id
-    }
-  }
 }
 
 ############################
 ###  SAVE FINAL OUTPUTS  ###
 ############################
 
-# Save the variables needed for APAlyzer_main
-setwd(pwd)
+# Save the variables needed for the downstream steps
 save(list = c("flsall", "gene_dict", "GTFfile", "unique_conditions", "condition_counts"), file = opt$out_preprocessing)

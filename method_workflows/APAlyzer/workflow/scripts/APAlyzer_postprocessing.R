@@ -1,6 +1,7 @@
 #------------------------Postprocessing------------------------
-# Takes APAlyzer output and generates differential challenge
-# output tsv file
+# Takes one or more APAlyzer differential outputs and generates a
+# differential challenge output tsv file. When more than one input is
+# provided the results tables are merged before postprocessing.
 
 # load libraries
 if ( suppressWarnings(suppressPackageStartupMessages(require("optparse"))) == FALSE ) { stop("[ERROR] Package 'optparse' required! Aborted.") }
@@ -22,11 +23,21 @@ msg = paste(description, version, requirements, sep = "\n")
 # Define list of arguments
 option_list = list(
   make_option(
+    "--in_preprocessing",
+    action = "store",
+    type = "character",
+    default = FALSE,
+    help = "Output of the preprocessing step (provides the gene symbol to gene id table).",
+    metavar = "files"
+  ),
+  make_option(
     "--in_postprocessing",
     action = "store",
     type = "character",
     default = FALSE,
-    help = "APAlyzer output variables to preprocess.",
+    help = "APAlyzer differential output variables to postprocess. Multiple files can be
+                provided as a comma-separated list, in which case their results tables are
+                merged before postprocessing.",
     metavar = "files"
   ),
   make_option(
@@ -63,11 +74,24 @@ opt = parse_args(opt_parser)
 ###  GENERATE OUTPUT  ###
 #########################
 
-# Load variables from preprocessing step
-load(opt$in_postprocessing)
+# Load the gene symbol to gene id table from the preprocessing step
+load(opt$in_preprocessing)
+
+# Load and merge the differential output(s)
+in_files = trimws(strsplit(opt$in_postprocessing, ",")[[1]])
+in_files = in_files[in_files != ""]
+
+out_df = NULL
+for(in_file in in_files) {
+    in_env = new.env()
+    load(in_file, envir = in_env)
+    if(!is.null(in_env$out_df)) {
+        out_df = rbind(out_df, in_env$out_df)
+    }
+}
 
 # If output df from APAlyzer is null, write a an empty tsv file
-if(is.null(out_df)) {
+if(is.null(out_df) || nrow(out_df) == 0) {
   file.create(opt$out_postprocessing)
   quit()
 }
@@ -95,4 +119,3 @@ df.df = data.frame(lapply(df, as.character), stringsAsFactors = FALSE)
 # Writing gene id and pvalue to tsv output file
 write.table(df, file = opt$out_postprocessing, sep = "\t",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-

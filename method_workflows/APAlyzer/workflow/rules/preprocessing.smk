@@ -9,6 +9,10 @@ import os
 rule rename_gtf:
     """
     A rule that renames gtf file to the correct format for preprocessing
+
+    APAlyzer's PAS2GEF() parses the organism, genome version and Ensembl version from the
+    basename of the GTF file, so a symbolic link with the expected naming convention is
+    created rather than copying the (potentially very large) annotation file.
     """
 
     input:
@@ -21,7 +25,7 @@ rule rename_gtf:
 		config["gtf_genome_version"] + "." + \
 		config["gtf_ensemble_version"] + ".gtf")
     shell:
-        "cp {input} {output}"
+        "ln -sfn $(realpath {input}) {output}"
 
 rule preprocessing:
     """
@@ -30,14 +34,15 @@ rule preprocessing:
     """
 
     input:
-        gtf = rules.rename_gtf.output.gtf_renamed
+        gtf = rules.rename_gtf.output.gtf_renamed,
+        gene_dict_csv = get_gene_dict_input
 
     output:
         out_preprocessing = os.path.join(config["out_dir"], 'preprocessing.RData')
  
     params:
-       outdir = config["out_dir"],
-       sample_file = config["sample_file"]
+       sample_file = config["sample_file"],
+       gene_dict_opt = lambda wildcards, input: f"--gene_dict_csv {input.gene_dict_csv}" if config["use_precomputed_gene_dict"] else ""
 
     log:
         os.path.join(LOG_DIR, "preprocessing.log")
@@ -47,7 +52,7 @@ rule preprocessing:
 
     shell:
         """(Rscript  workflow/scripts/APAlyzer_preprocessing.R \
-            --dir_path {params.outdir} \
             --sample_file_path {params.sample_file} \
             --input_gtf {input.gtf} \
+            {params.gene_dict_opt} \
             --out_preprocessing {output.out_preprocessing};) &> {log}"""

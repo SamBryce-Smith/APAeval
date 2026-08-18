@@ -1,7 +1,8 @@
 # Configuration file for APAlyzer snakemake pipeline
 
-# Note: paths in this config file are relative to the
-#       working directory APAlyzer_snakemake
+# Note: relative paths in this config file are resolved relative to the
+#       execution directory (method_workflows/APAlyzer). 'out_dir' may be
+#       given as either a relative or an absolute path.
 
 # Path to run-specific sample file
 sample_file: "config/samples.csv"
@@ -17,7 +18,9 @@ run_differential: True
 
 # Path to output directory for run. Default: results/
 out_dir: "results/"
-# Output file name, ends with .tsv
+# Output file name for the merged 3'UTR + IPA differential challenge output, ends with .tsv
+# The per-branch outputs are derived from this name e.g.
+# 'differential_challenge_output.3utr.tsv' and 'differential_challenge_output.ipa.tsv'
 differential_output_file: "differential_challenge_output.tsv"
 # Name of log directory to be placed in out_dir. Default: logs/
 logs_subdir: "logs/"
@@ -28,6 +31,21 @@ gtf: "../../tests/test_data/gencode_2genes_noChr.vM18.annotation.gtf"
 gtf_organism: "Mus_musculus"
 gtf_genome_version: "GRCm39"
 gtf_ensemble_version: "103"
+
+# Skip building the gene_name -> gene_id table from the GTF file (the slowest step of
+# preprocessing) and read a precomputed table instead. The table only needs to be generated
+# once per GTF file; the CSV must contain the columns 'gene_name' and 'gene_id'.
+# When 'use_precomputed_gene_dict' is True, 'precomputed_gene_dict' must point to that CSV.
+use_precomputed_gene_dict: False
+precomputed_gene_dict: ""
+
+# Skip building the PAS reference regions from the GTF file and load a precomputed RData
+# object instead. The reference only needs to be generated once per GTF file - it is written
+# to '<out_dir>/pas_reference.RData' by the pas_reference rule and can be reused directly.
+# When 'use_precomputed_pas_reference' is True, 'precomputed_pas_reference' must point to
+# such an RData file.
+use_precomputed_pas_reference: False
+precomputed_pas_reference: ""
 
 # Read cutoff, default: 0
 # This is the minimum read count for UTRs. When set to some number
@@ -40,6 +58,15 @@ read_cutoff: 0
 #  "invert" is reverse sequencing,
 #  "NONE" is non-strand specific,
 strandtype: "forward"
+
+# Number of threads used for IPA counting (PASEXP_IPA 'nts' parameter). Default: 1
+ipa_threads: 1
+# Minimum mapping quality score for IPA counting (PASEXP_IPA 'minMQS' parameter). Default: 0
+ipa_min_mqs: 0
+# Library type for IPA counting (PASEXP_IPA 'SeqType' parameter);
+#  "SingleEnd" for single-end libraries,
+#  "ThreeMostPairEnd" for paired-end libraries
+ipa_seq_type: "SingleEnd"
 
 # APAlyzer docker container
 container: "docker://apaeval/apalyzer:1.0.6"
