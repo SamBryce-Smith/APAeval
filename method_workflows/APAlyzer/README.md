@@ -66,6 +66,16 @@ Modify the `--singularity-args` line in `run_local.sh` like below to ensure the 
 --sigularity-args="--bind /share/" \
 ```
 
+For remote / cluster runs, note that APAlyzer tool by default wants to cache data under /data (which apptainer/singularity containers usually don't have access to on shared systems.) One workaround is to add a bind to a temporary directory in your scratch space in the singularity arguments i.e.
+
+```bash
+TMP_DATA_MOUNT_DIR=/scratch/myusername/apalyzer-tmp-dir/
+mkdir -p $TMP_DATA_MOUNT_DIR
+snakemake -p ... \
+--use-singularity \
+--singularity-args "--bind $TMP_DATA_MOUNT_DIR:/data"
+```
+
 If you are satisfied with the bind arguments, you can run the workflow locally by doing `bash run_local.sh`
 
 ### Output & post-processing
